@@ -17,7 +17,7 @@ const CONFIG = {
   // ---------- musica di sottofondo ----------
   // Parte da sola al primo tocco (acceso di default); chi guarda può spegnerla col pulsante in alto a destra.
   // file = traccia dentro assets/ · volume = da 0 (muto) a 1 (massimo) · scrivi  musica: false  per toglierla del tutto
-  musica: { file: "assets/musica.mp3", volume: 0.5 },
+  musica: { file: "assets/musica.mp3", volume: 0.6 },
 
   // ---------- boarding pass (ultima pagina) ----------
   dest: "Disneyland Paris",

@@ -319,7 +319,7 @@ html.kb .tool{display:none;}
 
 </main>
 
-<script src="contenuti.js?v=2" charset="utf-8"></script>
+<script src="contenuti.js?v=3" charset="utf-8"></script>
 <script>
 /* I testi e i dati stanno in contenuti.js (CONFIG). Qui sotto: controllo che il file sia scritto bene e valori di riserva. */
 const DEFAULT_TESTI = {
@@ -766,25 +766,29 @@ function musicFade(v, sec, done){
   mGain.gain.linearRampToValueAtTime(v, t + sec);
   if (done) setTimeout(done, sec * 1000 + 50);
 }
+function initAudio(){                                                          // crea l'audio PRIMA del tocco (resta in pausa finché non c'è un gesto)
+  if (actx) return;
+  if (navigator.audioSession) navigator.audioSession.type = 'playback';       // iPhone: suona anche con il tasto silenzioso
+  const AC = window.AudioContext || window.webkitAudioContext;
+  try{ actx = new AC({ sampleRate:32000 }); }catch(e){ actx = new AC(); }     // 32 kHz basta (il brano arriva a 16 kHz) e dimezza la memoria
+  mGain = actx.createGain(); mGain.gain.value = 0; mGain.connect(actx.destination);
+}
+const musicBuf = MUSIC ? musicBytes.then(ab => { initAudio(); return new Promise((ok, ko) => actx.decodeAudioData(ab.slice(0), ok, ko)); }) : null;
 function startMusic(){
   if (!MUSIC || !musicOn) return;
   try{
-    if (!actx){
-      if (navigator.audioSession) navigator.audioSession.type = 'playback';   // iPhone: suona anche con il tasto silenzioso
-      actx = new (window.AudioContext || window.webkitAudioContext)();
-      mGain = actx.createGain(); mGain.gain.value = 0; mGain.connect(actx.destination);
-    }
+    initAudio();
     actx.resume();                                                              // dentro il gesto dell'utente
     if (musicStarted){ musicFade(MUSIC.volume, 1.2); return; }
     musicStarted = true;
-    musicBytes.then(ab => new Promise((ok, ko) => actx.decodeAudioData(ab.slice(0), ok, ko))).then(buf => {
+    musicBuf.then(buf => {                                                      // di solito già pronto: parte subito
       mSrc = actx.createBufferSource(); mSrc.buffer = buf; mSrc.loop = true; mSrc.connect(mGain); mSrc.start();
       if (musicOn) musicFade(MUSIC.volume, MUSIC.fadeIn);
     }).catch(() => { $('soundBtn').classList.add('hidden'); });
   }catch(e){ $('soundBtn').classList.add('hidden'); }
 }
 if (!MUSIC) $('soundBtn').classList.add('hidden');
-else musicBytes.catch(() => $('soundBtn').classList.add('hidden'));           // nessun file: il pulsante sparisce, il sito funziona uguale
+else musicBuf.catch(() => $('soundBtn').classList.add('hidden'));           // nessun file: il pulsante sparisce, il sito funziona uguale
 updateMusicBtn();
 function firstGesture(e){
   if (musicStarted || !musicOn || (e.target.closest && e.target.closest('#soundBtn'))) return;
